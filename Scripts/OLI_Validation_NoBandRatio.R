@@ -1,0 +1,314 @@
+## Comparison of other algorithms against MDN
+
+## I can use the scripts from my model
+
+require(dplyr)
+require(data.table)
+require(tidyr)
+require(sf)
+require(sp)
+require(ggplot2)
+require(scales)
+require(caret)
+require(caTools)
+require(e1071)
+require(randomForest)
+require(xgboost)
+require(GeoLight)
+require(caTools)
+require(rgdal)
+require(openxlsx)
+require(ggpubr)
+require(ggpointdensity)
+require(viridis)
+
+source('Scripts/Functions.R')
+source('Scripts/plot_scripts.R')
+source('Scripts//iops_function.R')
+
+# Path to MDN results .csv 
+
+path = 'MDN/MonteCarlo/OLI/'
+
+#Load files
+files = list.files(path = path, pattern = '.csv', full.names = T)
+
+#Create a list to store the .csv results from MDN
+
+mdn.list = list()
+
+
+for(i in 1:length(files)) {
+  
+  
+  mdn.list[[i]] = read.delim(files[i], header=T, sep = ',')
+  
+  print(i)
+  
+}
+
+
+## Load dataset for creaint benchmark ML models
+
+data = fread('Data/rrs_oli_v3.csv')
+
+### Loading SAA algorithms
+
+qaa_rgb = read.xlsx('Data/QAA_RGB/landsat_oli_qaa_rgb.xlsx', sheet = 1)
+qaa_lin = fread('Data/QAA_Yin/yin_secchi_oli.csv')
+
+### 
+
+
+dados = data.frame(campanha = data$local_year_month, 
+                   data = data$date, 
+                   local = data$local, 
+                   station_id = data$station_id, 
+                   local_year_month = data$local_year_month,
+                   secchi = data$secchi,
+                   organization = data$local,
+                   blue = data$`blue (sr-1)`, green = data$`green (sr-1)`, red = data$`red (sr-1)`)
+
+dados = cbind(dados, index_calc(blue = dados$blue, green = dados$green, red = dados$red))
+
+## Fazer para o QAA RGB e QAA YIN
+dados = merge(dados, qaa_rgb[, c('station_id', 'Predicted')], by = 'station_id')
+dados = rename(dados, Predicted_QAARGB = Predicted)
+
+
+## Fazer para o QAA RGB e QAA YIN
+dados = merge(dados, qaa_lin[, c('station_id', 'predicted_yin')], by = 'station_id')
+dados = rename(dados, Predicted_YIN = predicted_yin)
+
+
+
+
+dados = do.call(data.frame,lapply(dados, function(x) replace(x, is.infinite(x),NA)))
+
+
+dados = dados[duplicated(dados$station_id) == F,]
+
+K = length(mdn.list)
+
+RF = data.frame(1:K)
+SVM = data.frame(1:K)
+XGB = data.frame(1:K)
+MDN = data.frame(1:K)
+QAA_RGB = data.frame(1:K)
+QAA_YIN = data.frame(1:K)
+
+
+df.join = dados 
+
+for(i in 1:50) {
+  
+  set.seed(i)
+  samples_select = mdn.list[[i]]$local_year_month
+  
+  valid = mdn.list[[i]] %>% select(c('station_id','predicted', 'secchi', 'B2', 'B3', 'B4'))
+  names(valid) = c('station_id','MDN_pred', 'secchi', 'blue', 'green', 'red')
+  
+  valid = cbind(valid, index_calc(blue = valid$blue, green = valid$green, red = valid$red))
+  
+  #Merge with SAA
+  valid = df.join %>% select(station_id,
+                             Predicted_QAARGB,
+                             Predicted_YIN
+  ) %>% merge(valid, by = 'station_id')
+  
+  valid = valid[duplicated(valid) == FALSE, ]
+  
+  #Creating train dataset for data without this validation set
+  train = df.join[df.join$local_year_month %in% samples_select == F,] %>% na.omit()
+  
+  
+  
+  #RF Algorithm
+  
+  set.seed(i)
+  RF.MOD =  randomForest(secchi~blue+
+                           green+
+                           red+green_red+blue_green+LH+blue_red,
+                         data = train, ntree = 200, mtry = 2, importance = T)
+  set.seed(i)
+  
+  #SVM algorithm
+  SVM.MOD =  svm(secchi~blue+
+                   green+
+                   red+green_red+blue_green+LH+blue_red,
+                 kernel = 'radial', data = train, cost = 4)
+  
+  #Xgboost algorithm
+  
+  
+  xgb_train = xgb.DMatrix(data = as.matrix(train[,c('blue', 'green', 'red', 'green_red', 'blue_green','blue_red', 'LH')], label = train$secchi))
+  xgb_test  = xgb.DMatrix(data = as.matrix(valid[,c('blue', 'green', 'red', 'green_red', 'blue_green','blue_red' ,'LH')], label = valid$secchi))
+  
+  
+  set.seed(2)
+  bstSparse <- xgboost(data = as.matrix(train[,c('blue', 'green', 'red', 'green_red', 'blue_green','blue_red', 'LH')]), 
+                       label = train$secchi,
+                       max.depth = 10, 
+                       eta = 0.3, 
+                       gama = 0.3,
+                       nthread = 3, 
+                       min_child_weight = 1, 
+                       nrounds = 20, 
+                       objective = "reg:squaredlogerror", verbosa = 5)
+  
+  valid$XGBOOTS_SECCHI = predict(bstSparse, xgb_test)
+  valid$SECCHI_RF = predict(RF.MOD, valid)
+  valid$SECCHI_SVM = predict(SVM.MOD, valid[,6:12])
+  
+
+  RF[i,1:9] = estatisicas(real = valid$secchi, estimado = valid$SECCHI_RF)
+  SVM[i,1:9] = estatisicas(real = valid$secchi, estimado = valid$SECCHI_SVM)
+  XGB[i,1:9] = estatisicas(real = valid$secchi, estimado = valid$XGBOOTS_SECCHI)
+  MDN[i, 1:9] = estatisicas(real = valid$secchi, estimado = valid$MDN_pred)
+  QAA_RGB[i, 1:9] = estatisicas(real = valid$secchi, estimado = valid$Predicted_QAARGB)
+  QAA_YIN[i, 1:9] = estatisicas(real = valid$secchi, estimado = valid$Predicted_YIN)
+  
+  print(i)
+  
+  
+  
+}
+
+
+resmean = t(data.frame(
+  RF = RF %>% na.omit() %>% apply(MARGIN = 2, FUN = mean),
+  SVM = SVM %>% na.omit() %>% apply(MARGIN = 2, FUN = mean),
+  XGB = XGB %>% na.omit() %>% apply(MARGIN = 2, FUN = mean),
+  MDN = MDN %>% filter(MAPE < 1000) %>% na.omit() %>% apply(MARGIN = 2, FUN = mean),
+  QAA_YIN = QAA_YIN %>% filter(MAPE < 1000) %>% na.omit() %>% apply(MARGIN = 2, FUN = mean),
+  QAA_RGB = QAA_RGB %>% na.omit() %>% apply(MARGIN = 2, FUN = mean)))
+
+
+ressd = t(data.frame(
+  RF = RF %>% na.omit() %>% apply(MARGIN = 2, FUN = sd),
+  SVM = SVM %>% na.omit() %>% apply(MARGIN = 2, FUN = sd),
+  XGB = XGB %>% na.omit() %>% apply(MARGIN = 2, FUN = sd),
+  MDN = MDN %>% filter(MAPE < 1000) %>% na.omit() %>% apply(MARGIN = 2, FUN = sd),
+  QAA_YIN = QAA_YIN %>% filter(MAPE < 1000) %>% na.omit() %>% apply(MARGIN = 2, FUN = sd),
+  QAA_RGB = QAA_RGB %>% na.omit() %>% apply(MARGIN = 2, FUN = sd)))
+
+
+matrix_res = matrix(paste(round(resmean,2), "±", round(ressd,2)),
+                    nrow = nrow(ressd), ncol = ncol(ressd)) 
+
+rownames(matrix_res) = rownames(resmean)
+colnames(matrix_res) = colnames(resmean)
+
+View(matrix_res)
+
+write.table(matrix_res, 'Outputs/MonteCarlo_Results/oli_mc_results.csv')
+
+
+RF.pt = plots_secchi_validation_sep_log_density(estimado = valid$SECCHI_RF, 
+                                             medido = valid$secchi, 
+                                             METODO = '', campanha = 'GLORIA + LabISA', 
+                                             size_axis = 20, 
+                                             color = 'black',MAX_ZSD = 40,
+                                             separador = 'Random Forest',
+                                             size_txt = 6, 
+                                             size_title = 20)
+
+SVM.pt = plots_secchi_validation_sep_log_density(estimado = valid$SECCHI_SVM, 
+                                              medido = valid$secchi, 
+                                              METODO = '', campanha = 'GLORIA + LabISA', 
+                                              size_axis = 20,
+                                              color = 'black',MAX_ZSD = 40,
+                                              separador = 'SVM',
+                                              size_txt = 6, 
+                                              size_title = 20)
+
+
+XGB.pt = plots_secchi_validation_sep_log_density(estimado = valid$XGBOOTS_SECCHI, 
+                                              medido = valid$secchi, 
+                                              METODO = '',
+                                              campanha = 'GLORIA + LabISA', 
+                                              size_axis = 20, 
+                                              color = 'black',
+                                              separador = 'XGBoost',
+                                              size_txt = 6, MAX_ZSD = 40,
+                                              size_title = 20)
+
+
+MDN.pt = plots_secchi_validation_sep_log_density(estimado = valid$MDN_pred, 
+                                              medido = valid$secchi, 
+                                              METODO = '', campanha = 'GLORIA LabISA', 
+                                              size_axis = 20, 
+                                              color = 'black',MAX_ZSD = 40,
+                                              separador = 'MDN',
+                                              size_txt = 6, 
+                                              size_title = 20)
+
+
+QAA_RGB.pt = plots_secchi_validation_sep_log_density(estimado = valid$Predicted_QAARGB, 
+                                                  medido = valid$secchi, 
+                                                  METODO = '', campanha = 'GLORIA LabISA', 
+                                                  size_axis = 20, MAX_ZSD = 40,
+                                                  color = 'black',
+                                                  separador = 'QAA-RGB',
+                                                  size_txt = 6, 
+                                                  size_title = 20)
+
+matplot(y = valid$XGBOOTS_SECCHI, x = valid$secchi, xlim = c(0,50), ylim = c(0,50), pch = 20)
+abline(0,1)
+
+
+QAA_LIn.pt = plots_secchi_validation_sep_log_density(estimado = valid$Predicted_YIN, 
+                                                  medido = valid$secchi, 
+                                                  METODO = '', campanha = 'GLORIA LabISA', 
+                                                  size_axis = 20, MAX_ZSD = 40,
+                                                  color = 'black',
+                                                  separador = 'QAA-Yin',
+                                                  size_txt = 6, 
+                                                  size_title = 20)
+
+result = ggarrange(MDN.pt, XGB.pt, RF.pt, SVM.pt, QAA_RGB.pt,QAA_LIn.pt)
+
+ggsave(device = 'jpeg', plot = result,filename =  'Outputs/MonteCarlo_Results//oli.jpeg', width = 20, height = 13,dpi = 300, units = 'in')
+
+
+
+
+#RF Algorithm
+
+set.seed(i)
+RF.MOD =  randomForest(secchi~blue+
+                         green+
+                         red+blue_green+green_red+blue_red+LH,
+                       data = df.join, ntree = 62, mtry = 4, importance = T)
+
+
+varImpPlot(RF.MOD, pch = 20, main = 'Random Forest - Landsat-8/OLI')
+
+saveRDS(RF.MOD, 'Outputs/ML_Models/random_forest_oli.R')
+
+#SVM
+SVM.MOD =  svm(secchi~blue+
+                 green+
+                 red+blue_green+green_red+blue_red+LH,
+               kernel = 'radial', data = df.join, cost = 4)
+
+saveRDS(SVM.MOD, 'Outputs/ML_Models/SVM_oli.R')
+
+
+xgb_train = xgb.DMatrix(data = as.matrix(df.join[,c('blue', 'green', 'red', 'green_red', 'blue_green','blue_red', 'LH')], label = train$secchi))
+xgb_test  = xgb.DMatrix(data = as.matrix(valid[,c('blue', 'green', 'red', 'green_red', 'blue_green','blue_red' ,'LH')], label = valid$secchi))
+
+
+set.seed(2)
+bstSparse <- xgboost(data = as.matrix(df.join[,c('blue', 'green', 'red', 'green_red', 'blue_green','blue_red', 'LH')]), 
+                     label = df.join$secchi,
+                     max.depth = 10, 
+                     eta = 0.3, 
+                     gama = 0.3,
+                     nthread = 3, 
+                     min_child_weight = 1, 
+                     nrounds = 20, 
+                     objective = "reg:squaredlogerror", verbosa = 5)
+
+saveRDS(bstSparse, 'Outputs/ML_Models/XGB_oli.R')
+
