@@ -2,7 +2,7 @@
  
 This respository contain all the necessary code to reproduce the findings obtained in the paper: "Global Long-term Water Transparency Products from the Landsat Archive".
 
-The code contain Python and R scripts to apply Mixture Density Networks, Random Forest, Support Vector Regression, and XGBoost to simulated and satellite-retrieval Remote Sensing Reflectance (Rrs) data based on Landsat-family sensors. 
+The code contain Python and R scripts to apply Mixture Density Networks, Random Forest, Support Vector Regression, and XGBoost to simulated and satellite-retrieved Remote Sensing Reflectance (Rrs) data based on Landsat-family sensors. 
 
 Python scripts applies the Mixture Density Network (MDN) algorithm to Landsat atmospherically corrected or in situ measured Remote Sensing Reflectance to predict Secchi Disk Depth (Zsd). 
 
