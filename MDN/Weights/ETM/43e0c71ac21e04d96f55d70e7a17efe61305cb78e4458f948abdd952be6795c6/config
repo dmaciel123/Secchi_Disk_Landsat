@@ -1,0 +1,65 @@
+Created: 2023-06-01 10:05:41.055492
+Version: 2.0.1
+
+Dependencies
+------------
+align             : None
+batch             : 128
+benchmark         : False
+epsilon           : 0.001
+imputations       : 5
+l2                : 0.001
+lr                : 0.001
+model_lbl         : 
+n_hidden          : 100
+n_iter            : 10000
+n_layers          : 5
+n_mix             : 5
+no_bagging        : False
+product           : secchi_maciel
+sat_bands         : False
+seed              : 42
+sensor            : ETM
+subset            : 
+use_ratio         : True
+x_scalers         : 
+	('RatioTransformer', [[483, 560, 662]], {}) # 7 features: ['560/662', '483/560', '483/662', '483-560-662']
+	('RobustScaler', [], {})
+y_scalers         : 
+	('LogTransformer', [], {})
+	('MinMaxScaler', [(-1, 1)], {})
+
+Configuration
+-------------
+LOO_CV            : False
+animate           : False
+avg_est           : False
+darktheme         : False
+data_loc          : D:/Data/Insitu
+data_xtest_shape  : (2066, 3)
+data_xtrain_shape : (3623, 3)
+data_ytest_shape  : (2066, 1)
+data_ytrain_shape : (3623, 1)
+dataset           : all
+filename          : None
+model_loc         : Weights
+n_redraws         : 50
+n_rounds          : 10
+no_load           : True
+no_save           : False
+plot_loss         : False
+save_data         : False
+save_stats        : False
+silent            : False
+sim_loc           : D:/Data/Simulated
+threshold         : None
+use_all_ratio     : False
+use_auc           : False
+use_boosting      : False
+use_excl_Rrs      : False
+use_kbest         : 0
+use_noise         : False
+use_sim           : False
+use_tchlfix       : False
+verbose           : False
+wavelengths       : [483 560 662]
