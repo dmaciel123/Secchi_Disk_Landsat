@@ -1,0 +1,63 @@
+Created: 2023-07-24 09:10:52.432358
+Version: 2.0.1
+
+Dependencies
+------------
+align             : None
+batch             : 128
+benchmark         : False
+epsilon           : 0.001
+imputations       : 5
+l2                : 0.001
+lr                : 0.001
+model_lbl         : 
+n_hidden          : 100
+n_iter            : 10000
+n_layers          : 5
+n_mix             : 5
+no_bagging        : False
+product           : secchi-Maciel
+sat_bands         : False
+seed              : 42
+sensor            : TM
+subset            : 
+use_ratio         : True
+x_scalers         : 
+	('RatioTransformer', [[490, 570, 660]], {}) # 7 features: ['570/660', '490/570', '490/660', '490-570-660']
+	('RobustScaler', [], {})
+y_scalers         : 
+	('LogTransformer', [], {})
+	('MinMaxScaler', [(-1, 1)], {})
+
+Configuration
+-------------
+LOO_CV            : False
+animate           : False
+avg_est           : False
+darktheme         : False
+data_loc          : D:/Data/Insitu
+data_xtrain_shape : (5689, 3)
+data_ytrain_shape : (5689, 1)
+dataset           : all
+filename          : None
+model_loc         : Weights
+n_redraws         : 50
+n_rounds          : 10
+no_load           : False
+no_save           : False
+plot_loss         : False
+save_data         : False
+save_stats        : False
+silent            : False
+sim_loc           : D:/Data/Simulated
+threshold         : None
+use_all_ratio     : False
+use_auc           : False
+use_boosting      : False
+use_excl_Rrs      : False
+use_kbest         : 0
+use_noise         : False
+use_sim           : False
+use_tchlfix       : False
+verbose           : False
+wavelengths       : [490 570 660]
