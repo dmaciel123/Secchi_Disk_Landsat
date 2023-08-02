@@ -28,9 +28,9 @@ source("Scripts/00_SateliteValidation.R")
 
 # Load data 
 
-tm.sat =  fread('Outputs/Zsd_predicted_TM_v4.csv') 
-etm.sat = fread('Outputs/Zsd_predicted_ETM_v4.csv')
-oli.sat = fread('Outputs/Zsd_predicted_OLI_v4.csv')
+tm.sat =  fread('Data/ACOLITE//tm_acolite_maciel_v3.csv') 
+etm.sat = fread('Data/ACOLITE//etm_acolite_maciel_v3.csv')
+oli.sat = fread('Data/ACOLITE//oli_acolite_maciel_v3.csv')
 
 
 # Model validation
@@ -85,16 +85,20 @@ oli = satelite_validation_new(secchi_real = oli.sat$secchi,
                               DAYS = 3, 
                               method = 'ACOLITE')
 
-grafico = ggarrange(tm$graph, etm$graph, oli$graph, ncol = 2,nrow = 2, align = 'h')
 grafico_log = ggarrange(tm$graph.log, etm$graph.log, oli$graph.log, ncol = 2)
-ggsave(grafico, filename = 'Outputs/ModelApplication/ACOLITE/acolite_v4_basico.jpeg',  width = 17, height = 17, units = 'in', dpi =300)
 
 top_row = ggarrange(tm$graph.log, etm$graph.log, ncol = 2, labels = c("", ""))
 
 bottom_row = ggarrange(NULL, oli$graph.log, NULL, ncol = 3, labels = c("", "", ""), widths = c(1,2,1))
+
+#Final plot
+
 final_plot = ggarrange(top_row, bottom_row, ncol = 1) + bgcolor("white") 
 
-final_plot
 
-ggsave(final_plot, filename = 'Outputs/ModelApplication/ACOLITE/acolite_v4.jpeg',  width = 17, height = 17, units = 'in', dpi =300)
+ggsave(final_plot, filename = 'Outputs/ModelApplication/ACOLITE/acolite_v4.jpeg',  
+       width = 23, height = 20, units = 'in', dpi =300)
 
+
+
+c(tm$Secchi$Image_name, etm$Secchi$Image_name, oli$Secchi$Image_name) %>% length()

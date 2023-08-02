@@ -704,7 +704,7 @@ estatisicas = function(real, estimado) {
   
   require(Metrics)
   
-  df = data.frame(real = real, estimado = estimado) %>% na.omit() %>% filter(real > 0 & estimado > 0)
+  df = data.frame(real = real, estimado = estimado) %>% na.omit() %>% dplyr::filter(real > 0 & estimado > 0 & estimado < 1000)
   
   Y = log10(df$estimado/df$real)
   

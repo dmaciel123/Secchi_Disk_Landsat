@@ -22,13 +22,12 @@ require(ggpubr)
 require(ggpointdensity)
 require(viridis)
 
-source('Scripts/Functions.R')
-source('Scripts/plot_scripts.R')
-source('Scripts/iops_function.R')
+source('Scripts/00_Functions.R')
+source('Scripts/00_plot_scripts.R')
+source('Scripts/00_iops_function.R')
 
 # Path to MDN results .csv 
-
-path = 'MDN/MonteCarlo/TM/'
+path = 'MonteCarlo/TM/'
 
 #Load files
 files = list.files(path = path, pattern = '.csv', full.names = T)
@@ -50,7 +49,8 @@ for(i in 1:length(files)) {
 
 ## Load dataset for creaint benchmark ML models
 
-data = fread('Data/rrs_tm_v3.csv')
+data = fread('Data/Simulated Dataset/rrs_sim_TM_v3.csv')
+
 
 ### Loading SAA algorithms
 
@@ -65,9 +65,9 @@ dados = data.frame(campanha = data$local_year_month,
                    local = data$local, 
                    station_id = data$station_id, 
                    local_year_month = data$local_year_month,
-                   secchi = data$secchi,
+                   secchi = data$secchi_m,
                    organization = data$local,
-                   blue = data$`blue (sr-1)`, green = data$`green (sr-1)`, red = data$`red (sr-1)`)
+                   blue = data$Rrs486, green = data$Rrs571, red = data$Rrs660)
 
 dados = cbind(dados, index_calc(blue = dados$blue, green = dados$green, red = dados$red))
 
@@ -85,7 +85,7 @@ dados = rename(dados, Predicted_YIN = predicted_yin)
 dados = do.call(data.frame,lapply(dados, function(x) replace(x, is.infinite(x),NA)))
 
 # Remove NA
-dados = dados[duplicated(dados$station_id) == F,]
+df.join = dados[duplicated(dados$station_id) == F,]
 
 K = length(mdn.list)
 
@@ -104,7 +104,7 @@ for(i in 1:K) {
   set.seed(i)
   samples_select = mdn.list[[i]]$local_year_month
   
-  valid = mdn.list[[i]] %>% select(c('station_id','predicted', 'secchi', 'B1', 'B2', 'B3'))
+  valid = mdn.list[[i]] %>% select(c('station_id','predicted', 'secchi_m', 'Rrs486', 'Rrs571', 'Rrs660'))
   names(valid) = c('station_id','MDN_pred', 'secchi', 'blue', 'green', 'red')
   
   valid = cbind(valid, index_calc(blue = valid$blue, green = valid$green, red = valid$red))
@@ -128,7 +128,7 @@ for(i in 1:K) {
   RF.MOD =  randomForest(secchi~blue+
                            green+
                            red+green_red+blue_green+LH+blue_red,
-                         data = train, ntree = 62, mtry = 2, importance = T)
+                         data = train, ntree = 62, mtry = 3, importance = T)
   set.seed(i)
   
   #SVM algorithm
@@ -203,64 +203,73 @@ View(matrix_res)
 
 write.table(matrix_res, 'Outputs/MonteCarlo_Results/tm_mc_results.csv')
 
-RF = plots_secchi_validation_sep_log_density(estimado = valid$SECCHI_RF, 
-                                             medido = valid$secchi, 
-                                             METODO = 'Random Forest', campanha = 'GLORIA + LabISA', 
-                                             size_axis = 10, MAX_ZSD = 20,
-                                             color = 'black',
-                                             separador = 'a',
-                                             size_txt = 5, 
-                                             size_title = 10)
+RF.pt = plots_secchi_validation_sep_log_density(estimado = valid$SECCHI_RF, 
+                                                medido = valid$secchi, 
+                                                METODO = '', campanha = 'GLORIA + LabISA', 
+                                                size_axis = 20, size_points = 2,
+                                                color = 'black',MAX_ZSD = 40,
+                                                separador = 'Random Forest',
+                                                size_txt = 6, 
+                                                size_title = 20)
 
-SVM = plots_secchi_validation_sep_log_density(estimado = valid$SECCHI_SVM, 
-                                              medido = valid$secchi, 
-                                              METODO = 'SVM', campanha = 'GLORIA + LabISA', 
-                                              size_axis = 10, MAX_ZSD = 20,
-                                              color = 'black',
-                                              separador = 'a',
-                                              size_txt = 5, 
-                                              size_title = 10)
-
-
-XGB = plots_secchi_validation_sep_log_density(estimado = valid$XGBOOTS_SECCHI, 
-                                              medido = valid$secchi, 
-                                              METODO = 'XGBoost',
-                                              campanha = 'GLORIA + LabISA', 
-                                              size_axis = 10, MAX_ZSD = 20,
-                                              color = 'black',
-                                              separador = 'a',
-                                              size_txt = 5, 
-                                              size_title = 10)
+SVM.pt = plots_secchi_validation_sep_log_density(estimado = valid$SECCHI_SVM, 
+                                                 medido = valid$secchi, 
+                                                 METODO = '', campanha = 'GLORIA + LabISA', 
+                                                 size_axis = 20, size_points = 2,
+                                                 color = 'black',MAX_ZSD = 40,
+                                                 separador = 'SVM',
+                                                 size_txt = 6, 
+                                                 size_title = 20)
 
 
-MDN = plots_secchi_validation_sep_log_density(estimado = valid$MDN_pred, 
-                                              medido = valid$secchi, 
-                                              METODO = 'MDN', campanha = 'GLORIA LabISA', 
-                                              size_axis = 10, MAX_ZSD = 20,
-                                              color = 'black',
-                                              separador = 'a',
-                                              size_txt = 5, 
-                                              size_title = 10)
+XGB.pt = plots_secchi_validation_sep_log_density(estimado = valid$XGBOOTS_SECCHI, 
+                                                 medido = valid$secchi, 
+                                                 METODO = '',
+                                                 campanha = 'GLORIA + LabISA', 
+                                                 size_axis = 20, size_points = 2,
+                                                 color = 'black',
+                                                 separador = 'XGBoost',
+                                                 size_txt = 6, MAX_ZSD = 40,
+                                                 size_title = 20)
 
 
-QAA_RGB = plots_secchi_validation_sep_log_density(estimado = valid$Predicted_QAARGB, 
-                                medido = valid$secchi, 
-                                METODO = 'QAA-RGB', campanha = 'GLORIA LabISA', 
-                                size_axis = 10, MAX_ZSD = 20,
-                                size_txt = 5, separador = 'a',color = 'a',
-                                size_title = 10)
+MDN.pt = plots_secchi_validation_sep_log_density(estimado = valid$MDN_pred, 
+                                                 medido = valid$secchi, 
+                                                 METODO = '', campanha = 'GLORIA LabISA', 
+                                                 size_axis = 20, size_points = 2,
+                                                 color = 'black',MAX_ZSD = 40,
+                                                 separador = 'MDN',
+                                                 size_txt = 6, 
+                                                 size_title = 20)
 
 
-QAA_LIn = plots_secchi_validation_sep_log_density(estimado = valid$Predicted_YIN, 
-                                medido = valid$secchi, 
-                                METODO = 'QAA Lin et al. (2021)',  campanha = 'GLORIA LabISA', 
-                                size_axis = 10, MAX_ZSD = 20,
-                                size_txt = 5, separador = 'a',color = 'a',
-                                size_title = 10)
+QAA_RGB.pt = plots_secchi_validation_sep_log_density(estimado = valid$Predicted_QAARGB, 
+                                                     medido = valid$secchi, 
+                                                     METODO = '', campanha = 'GLORIA LabISA', 
+                                                     MAX_ZSD = 40,
+                                                     size_axis = 20, size_points = 2,
+                                                     
+                                                     color = 'black',
+                                                     separador = 'QAA-RGB',
+                                                     size_txt = 6, 
+                                                     size_title = 20)
 
-result = ggarrange(MDN, XGB, RF, SVM, QAA_RGB,QAA_LIn)
 
-ggsave(device = 'jpeg', plot = result,filename =  'Outputs/MonteCarlo_Results/tm.jpeg', width = 20, height = 15,dpi = 300, units = 'in')
+
+QAA_LIn.pt = plots_secchi_validation_sep_log_density(estimado = valid$Predicted_YIN, 
+                                                     medido = valid$secchi, 
+                                                     METODO = '', campanha = 'GLORIA LabISA', 
+                                                     size_axis = 20, size_points = 2,
+                                                     MAX_ZSD = 40,
+                                                     color = 'black',
+                                                     separador = 'QAA-Yin',
+                                                     size_txt = 6, 
+                                                     size_title = 20)
+
+result = ggarrange(MDN.pt, XGB.pt, RF.pt, SVM.pt, QAA_RGB.pt,QAA_LIn.pt)
+
+ggsave(device = 'jpeg', plot = result,filename =  'Outputs/MonteCarlo_Results//tm.jpeg', width = 20, height = 13,dpi = 300, units = 'in')
+
 
 
 ##Full models

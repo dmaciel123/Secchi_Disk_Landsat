@@ -15,7 +15,7 @@ import os
 print(os.getcwd())
 #Generate Secchi estimates using MDN for Landsat-5/TM
 
-Data = pd.read_csv(r"Data//ACOLITE/tm_acolite_maciel_v3.csv")
+Data = pd.read_csv(r"/Users/danielmaciel/Library/CloudStorage/OneDrive-inpe.br/Doutorado/Artigos/Global Secchi/Data/TimeSeries/testes_threshold/secchidisk_v1/l5.csv")
 
 print(Data)
 
@@ -51,4 +51,4 @@ final_df = apply_secchi.reset_index()
 final_df['predicted'] = results['Secchi']
 
 print(final_df)
-final_df.to_csv(r"Outputs/Zsd_predicted_TM_v3.csv")
+final_df.to_csv(r"/Users/danielmaciel/Library/CloudStorage/OneDrive-inpe.br/Doutorado/Artigos/Global Secchi/Data/TimeSeries/testes_threshold/secchidisk_v1/l5.csv")

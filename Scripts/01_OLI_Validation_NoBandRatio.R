@@ -22,13 +22,13 @@ require(ggpubr)
 require(ggpointdensity)
 require(viridis)
 
-source('Scripts/Functions.R')
-source('Scripts/plot_scripts.R')
-source('Scripts//iops_function.R')
+source('Scripts/00_Functions.R')
+source('Scripts/00_plot_scripts.R')
+source('Scripts/00_iops_function.R')
 
 # Path to MDN results .csv 
 
-path = 'MDN/MonteCarlo/OLI/'
+path = 'MonteCarlo/OLI/'
 
 #Load files
 files = list.files(path = path, pattern = '.csv', full.names = T)
@@ -50,7 +50,9 @@ for(i in 1:length(files)) {
 
 ## Load dataset for creaint benchmark ML models
 
-data = fread('Data/rrs_oli_v3.csv')
+data = fread('Data/Simulated Dataset/rrs_sim_OLI_v3.csv')
+
+
 
 ### Loading SAA algorithms
 
@@ -65,28 +67,25 @@ dados = data.frame(campanha = data$local_year_month,
                    local = data$local, 
                    station_id = data$station_id, 
                    local_year_month = data$local_year_month,
-                   secchi = data$secchi,
+                   secchi = data$secchi_m,
                    organization = data$local,
-                   blue = data$`blue (sr-1)`, green = data$`green (sr-1)`, red = data$`red (sr-1)`)
+                   blue = data$Rrs483, green = data$Rrs561, red = data$Rrs655)
 
 dados = cbind(dados, index_calc(blue = dados$blue, green = dados$green, red = dados$red))
 
 ## Fazer para o QAA RGB e QAA YIN
-dados = merge(dados, qaa_rgb[, c('station_id', 'Predicted')], by = 'station_id')
-dados = rename(dados, Predicted_QAARGB = Predicted)
+dados2 = merge(dados, qaa_rgb[, c('station_id', 'Predicted')], by = 'station_id')
+dados2 = rename(dados2, Predicted_QAARGB = Predicted)
 
 
 ## Fazer para o QAA RGB e QAA YIN
-dados = merge(dados, qaa_lin[, c('station_id', 'predicted_yin')], by = 'station_id')
-dados = rename(dados, Predicted_YIN = predicted_yin)
+dados2 = merge(dados2, qaa_lin[, c('station_id', 'predicted_yin')], by = 'station_id')
+dados2 = rename(dados2, Predicted_YIN = predicted_yin)
+
+dados3 = do.call(data.frame,lapply(dados2, function(x) replace(x, is.infinite(x),NA)))
 
 
-
-
-dados = do.call(data.frame,lapply(dados, function(x) replace(x, is.infinite(x),NA)))
-
-
-dados = dados[duplicated(dados$station_id) == F,]
+df.join = dados3[duplicated(dados3$station_id) == F,]
 
 K = length(mdn.list)
 
@@ -98,20 +97,19 @@ QAA_RGB = data.frame(1:K)
 QAA_YIN = data.frame(1:K)
 
 
-df.join = dados 
 
 for(i in 1:50) {
   
   set.seed(i)
   samples_select = mdn.list[[i]]$local_year_month
   
-  valid = mdn.list[[i]] %>% select(c('station_id','predicted', 'secchi', 'B2', 'B3', 'B4'))
+  valid = mdn.list[[i]] %>% dplyr::select(c('station_id','predicted', 'secchi_m', 'Rrs483', 'Rrs561', 'Rrs655'))
   names(valid) = c('station_id','MDN_pred', 'secchi', 'blue', 'green', 'red')
   
   valid = cbind(valid, index_calc(blue = valid$blue, green = valid$green, red = valid$red))
   
   #Merge with SAA
-  valid = df.join %>% select(station_id,
+  valid = df.join %>% dplyr::select(station_id,
                              Predicted_QAARGB,
                              Predicted_YIN
   ) %>% merge(valid, by = 'station_id')
@@ -129,7 +127,7 @@ for(i in 1:50) {
   RF.MOD =  randomForest(secchi~blue+
                            green+
                            red+green_red+blue_green+LH+blue_red,
-                         data = train, ntree = 200, mtry = 2, importance = T)
+                         data = train, ntree = 62, mtry = 3, importance = T)
   set.seed(i)
   
   #SVM algorithm
@@ -157,7 +155,7 @@ for(i in 1:50) {
                        objective = "reg:squaredlogerror", verbosa = 5)
   
   valid$XGBOOTS_SECCHI = predict(bstSparse, xgb_test)
-  valid$SECCHI_RF = predict(RF.MOD, valid)
+  valid$SECCHI_RF = predict(RF.MOD, valid[,6:12])
   valid$SECCHI_SVM = predict(SVM.MOD, valid[,6:12])
   
 
@@ -201,7 +199,7 @@ colnames(matrix_res) = colnames(resmean)
 
 View(matrix_res)
 
-write.table(matrix_res, 'Outputs/MonteCarlo_Results/oli_mc_results.csv')
+write.table(matrix_res, 'Outputs/MonteCarlo_Results/etm_mc_results.csv')
 
 
 RF.pt = plots_secchi_validation_sep_log_density(estimado = valid$SECCHI_RF, 
@@ -253,8 +251,6 @@ QAA_RGB.pt = plots_secchi_validation_sep_log_density(estimado = valid$Predicted_
                                                   size_txt = 6, 
                                                   size_title = 20)
 
-matplot(y = valid$XGBOOTS_SECCHI, x = valid$secchi, xlim = c(0,50), ylim = c(0,50), pch = 20)
-abline(0,1)
 
 
 QAA_LIn.pt = plots_secchi_validation_sep_log_density(estimado = valid$Predicted_YIN, 
@@ -268,7 +264,7 @@ QAA_LIn.pt = plots_secchi_validation_sep_log_density(estimado = valid$Predicted_
 
 result = ggarrange(MDN.pt, XGB.pt, RF.pt, SVM.pt, QAA_RGB.pt,QAA_LIn.pt)
 
-ggsave(device = 'jpeg', plot = result,filename =  'Outputs/MonteCarlo_Results//oli.jpeg', width = 20, height = 13,dpi = 300, units = 'in')
+ggsave(device = 'jpeg', plot = result,filename =  'Outputs/MonteCarlo_Results//etm.jpeg', width = 20, height = 13,dpi = 300, units = 'in')
 
 
 

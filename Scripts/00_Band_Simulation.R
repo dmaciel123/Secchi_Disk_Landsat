@@ -12,8 +12,8 @@ source("Scripts/00_SAM_OWT.R")
 
 ## Loading dataset
 
-data = fread("Data/rrs_hyper_v4.csv")
-
+data = fread("Data/rrs_hyper_v3.csv")
+data2 = fread("Data/rrs_hyper_v3 2.csv")
 
 
 #References from Lianwei Wei et al. 2022
@@ -37,20 +37,19 @@ ETM = etm_simulation(spectra = t(data_for_sim), point_name = data$station_id)
 TM = tm_simulation(spectra = t(data_for_sim), point_name = data$station_id)
 
 
-#Back to the correct directory
-
-
 OLI.t = t(OLI[,-1]) %>% data.frame()
 ETM.t = t(ETM[,-1]) %>% data.frame()
 TM.t = t(TM[,-1]) %>% data.frame()
 
 
-names(OLI.t)  =  c('B1', 'B2', 'B3', 'B4', 'B5')
-names(ETM.t)  =  c('B1', 'B2', 'B3', 'B4')
-names(TM.t)  =  c('B1', 'B2', 'B3', 'B4')
+names(OLI.t)  =  c('Rrs443', 'Rrs483', 'Rrs561', 'Rrs655', 'Rrs850')
+names(ETM.t)  =  c('Rrs479', 'Rrs561', 'Rrs661', 'Rrs850')
+names(TM.t)  =  c('Rrs486', 'Rrs571', 'Rrs660', 'Rrs850')
 
 
 #Creating lake year month dataset
+
+data$date = as.Date(data$date, format = '%d/%m/%y')
 
 data.sep = data %>% separate(date, into = c('year', 'month', 'day'))
 
@@ -63,9 +62,11 @@ OLI.merge    = cbind(dplyr::select(data, -paste("Rrs_", 400:900, sep = '')), OLI
 ETM.merge    = cbind(dplyr::select(data, -paste("Rrs_", 400:900, sep = '')), ETM.t)
 TM.merge     = cbind(dplyr::select(data, -paste("Rrs_", 400:900, sep = '')), TM.t)
 
+OLI.merge = rename(OLI.merge, secchi_m = secchi)
+ETM.merge = rename(ETM.merge, secchi_m = secchi)
+TM.merge = rename(TM.merge, secchi_m = secchi)
 
-
-write.csv(OLI.merge, "Data/Simulated dataset/rrs_sim_OLI_v4.csv")
-write.csv(ETM.merge, "Data/Simulated dataset/rrs_sim_ETM_v4.csv")
-write.csv(TM.merge,  "Data/Simulated dataset/rrs_sim_TM_v4.csv")
+write.csv(OLI.merge, "Data/Simulated dataset/rrs_sim_OLI_v3.csv")
+write.csv(ETM.merge, "Data/Simulated dataset/rrs_sim_ETM_v3.csv")
+write.csv(TM.merge,  "Data/Simulated dataset/rrs_sim_TM_v3.csv")
 

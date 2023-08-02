@@ -25,7 +25,7 @@ import random
 import tensorflow as tf
 
 # Dataset creation and separation into train / test (70% / 30%)
-dataset = pd.read_csv(r"/Data//Simulated Dataset/rrs_sim_OLI_v3.csv", sep = ',')
+dataset = pd.read_csv(r"Data/Simulated Dataset/rrs_sim_OLI_v3.csv", sep = ',')
 
 dataset.set_index("local_year_month",  inplace = True)
 
@@ -44,11 +44,11 @@ for i in range(0,50):
     train = dataset.loc[lake_train]
     test = dataset.drop(lake_train, errors='ignore')
 
-    X_train = train[["B2", "B3", "B4"]]
-    X_test = test[["B2",  "B3", "B4"]]
+    X_train = train[["Rrs483", "Rrs561", "Rrs655"]]
+    X_test = test[["Rrs483",  "Rrs561", "Rrs655"]]
 
-    y_train = train[['secchi']]
-    y_test = test[['secchi']]
+    y_train = train[['secchi_m']]
+    y_test = test[['secchi_m']]
 
 
     ## MDN Training and validation 
@@ -75,7 +75,9 @@ for i in range(0,50):
 
     test['predicted']  = estimates_MDN
 
-    a = f"/MonteCarlo/OLI/MDN_run_number_{i}.csv"
+    #a = f"MonteCarlo/OLI/MDN_run_number_{i}.csv"
+    a = f"/Volumes/Crucial X8/Projects/Secchi_Disk_Landsat/MonteCarlo/OLI/MDN_run_number_{i}.csv"
+
     pd.DataFrame(test).to_csv(a)
 
     print(a)

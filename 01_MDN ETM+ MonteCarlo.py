@@ -24,7 +24,7 @@ import random
 import tensorflow as tf
 
 # Dataset creation and separation into train / test (70% / 30%)
-dataset = pd.read_csv(r"/Data//Simulated Dataset/rrs_sim_ETM_v3.csv", sep = ',')
+dataset = pd.read_csv(r"Data//Simulated Dataset/rrs_sim_ETM_v3.csv", sep = ',')
 
 dataset.set_index("local_year_month",  inplace = True)
 
@@ -33,7 +33,7 @@ local_unique = np.unique(dataset.index)
 #Removing some datase
 
   
-for i in range(2,50):
+for i in range(0,4):
 
     lake_train, lake_test = train_test_split(local_unique, test_size = 0.3, random_state=i)
 
@@ -41,11 +41,11 @@ for i in range(2,50):
     train = dataset.loc[lake_train]
     test = dataset.drop(lake_train, errors='ignore')
 
-    X_train = train[["B1", "B2", "B3"]]
-    X_test = test[["B1",  "B2", "B3"]]
+    X_train = train[["Rrs479", "Rrs561", "Rrs661"]]
+    X_test = test[["Rrs479",  "Rrs561", "Rrs661"]]
 
-    y_train = train[['secchi']]
-    y_test = test[['secchi']]
+    y_train = train[['secchi_m']]
+    y_test = test[['secchi_m']]
 
 
     ## MDN Training and validation 
@@ -72,7 +72,8 @@ for i in range(2,50):
 
     test['predicted']  = estimates_MDN
 
-    a = f"/MonteCarlo/ETM/MDN_run_number_{i}.csv"
+    a = f"/Volumes/Crucial X8/Projects/Secchi_Disk_Landsat/MonteCarlo/ETM/MDN_run_number_{i}.csv"
+
     pd.DataFrame(test).to_csv(a)
 
     print(a)
