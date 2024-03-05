@@ -24,10 +24,21 @@ First, clone the repository using the following command
 git clone https://github.com/dmaciel123/GlobalSecchiLandsat
 ```
 
+Then, create a new environment called MDN
+
+```sh
+conda create -n MDN python=3.9
+
+conda activate MDN
+
+```
+
+
 After that, cd to your MDN folder and install the requirements based on the requirements.txt file. 
 
 ``` sh
-pip install -r .\requirements.txt
+cd MDN
+pip install -r requirements.txt
 ```
 
 ## Running the MDN algorithm for in situ data
